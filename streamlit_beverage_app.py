@@ -125,10 +125,8 @@ def build_prompt(inputs: dict) -> str:
     if inputs["category"] == "Alcohol RTD":
         alcohol_section = (
             f"Alcohol Percentage (ABV): {inputs['alcohol_percentage']}\n"
-            f"Alcohol Base Preference: {inputs['alcohol_base']}
-"
-            f"Calorie Target or Range: {inputs['calorie_limit']}
-"
+            f"Alcohol Base Preference: {inputs['alcohol_base']}"
+            f"Calorie Target or Range: {inputs['calorie_limit']}"
         )
 
     caffeine_section = ""
@@ -299,6 +297,7 @@ with input_tab:
             with col1:
                 flavor = st.text_input("Flavor", placeholder="Tropical Punch")
                 market = st.text_input("Target Market", placeholder="Gamers")
+
                 if category == "Energy":
                     caffeine_raw = st.selectbox(
                         "Caffeine Level",
@@ -308,6 +307,7 @@ with input_tab:
                     caffeine = display_label(caffeine_raw)
                 else:
                     caffeine = "Not Applicable"
+
                 carbonation_raw = st.selectbox(
                     "Carbonation",
                     ["carbonated", "non-carbonated"],
@@ -322,23 +322,32 @@ with input_tab:
                     format_func=display_label,
                 )
                 package_type = display_label(package_type_raw)
+
                 package_size = st.text_input("Package Size", placeholder="12 oz")
+
                 process_choice = st.selectbox(
                     "Manufacturing Process",
                     MANUFACTURING_PROCESS_OPTIONS,
                     format_func=display_label,
-                    help="Clients often may not know the process. You can leave this as 'Not Specified Yet' or choose an example such as HTST, Aseptic, or Hot Fill.",
+                    help="Clients may not know the process. Leave as Not Specified Yet or choose an example like HTST, Aseptic, or Hot Fill.",
                 )
                 process = normalize_process(process_choice)
+
                 num_concepts = st.selectbox("Number of Concepts", [1, 3, 5], index=1)
 
             alcohol_percentage = ""
             alcohol_base = ""
             calorie_limit = ""
-            if category == "Alcohol RTD":
+
+            if category_raw == "alcohol rtd":
                 alcohol_col1, alcohol_col2, alcohol_col3 = st.columns(3)
+
                 with alcohol_col1:
-                    alcohol_percentage = st.text_input("Alcohol Percentage (ABV)", placeholder="5%")
+                    alcohol_percentage = st.text_input(
+                        "Alcohol Percentage (ABV)",
+                        placeholder="5%"
+                    )
+
                 with alcohol_col2:
                     alcohol_base_options = st.multiselect(
                         "Alcohol Base Options",
@@ -346,16 +355,22 @@ with input_tab:
                         format_func=display_label,
                     )
                     alcohol_base = join_or_none(alcohol_base_options)
+
                 with alcohol_col3:
-                    calorie_limit = st.text_input("Calorie Target or Range", placeholder="100-120 calories")
+                    calorie_limit = st.text_input(
+                        "Calorie Target or Range",
+                        placeholder="100-120 calories"
+                    )
 
         with st.expander("Ingredient System Selection", expanded=True):
-            st.caption("Use these selections to identify ingredients or ingredient systems the client wants to include. Use the separate avoidance box for anything they do not want in the concept.")
+            st.caption("Use these selections to identify ingredients the client wants to include. Use the separate avoidance box for anything they do not want.")
+
             sweetener_options = st.multiselect(
                 "Sweeteners To Include",
                 SWEETENER_OPTIONS,
                 format_func=display_label,
             )
+
             functional_options = st.multiselect(
                 "Functional Ingredients To Include",
                 FUNCTIONAL_OPTIONS,
@@ -380,12 +395,16 @@ with input_tab:
                 "Other Desired Ingredients or Notes",
                 placeholder="Electrolytes, juice content, natural colors, botanical extracts"
             )
+
             ingredients_avoid = st.text_area(
                 "Ingredients To Avoid",
                 placeholder="Erythritol, sodium benzoate, cane sugar"
             )
 
-        submitted = st.form_submit_button("Generate Client-Ready Concepts", use_container_width=True)
+        submitted = st.form_submit_button(
+            "Generate Client-Ready Concepts",
+            use_container_width=True
+        )
 
     if submitted:
         inputs = {
