@@ -1,3 +1,6 @@
 .env
 __pycache__/
 *.pyc
+*_concept_output.txt
+*_concept_output.md
+concept_output.txt
