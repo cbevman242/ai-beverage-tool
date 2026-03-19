@@ -318,7 +318,7 @@ with input_tab:
             with col2:
                 package_type_raw = st.selectbox(
                     "Package Type",
-                    ["can", "pet bottle"],
+                    ["can", "pet bottle", "glass"],
                     format_func=display_label,
                 )
                 package_type = display_label(package_type_raw)
