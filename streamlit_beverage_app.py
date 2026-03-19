@@ -151,13 +151,25 @@ For each concept, include:
 - Flavor Profile
 - Branding Angle
 - Suggested Ingredient List
+- Suggested Formulation Direction:
+    - Sweetener System approach
+    - Acid system approach
+    - Preservative Strategy
+    - Key Functional ingredients
 - Equipment Needed to Manufacture
+- Manufacturing Reality Check:
+    - Key manufacturing challenges
+    - Shelf-life considerations
+    - Process compatibility risks
 - Packaging Summary
 - Potential Claims / Positioning Ideas
 - Key Technical Risks
 - Suggested Next Development Step
 - Potential Consumer Positioning
-- Price Tier Suggestion
+- Commercial Viability:
+    - Estimated cost positioning (Low / Medium / High)
+    - Target retail price range
+    - Key Cost Drivers
 - Risks or Formulation Watchouts
 - Go / No-Go Recommendation
 - Estimated Development Difficulty (Low / Medium / High)
