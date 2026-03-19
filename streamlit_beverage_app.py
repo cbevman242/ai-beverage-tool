@@ -125,7 +125,10 @@ def build_prompt(inputs: dict) -> str:
     if inputs["category"] == "Alcohol RTD":
         alcohol_section = (
             f"Alcohol Percentage (ABV): {inputs['alcohol_percentage']}\n"
-            f"Alcohol Base Preference: {inputs['alcohol_base']}\n"
+            f"Alcohol Base Preference: {inputs['alcohol_base']}
+"
+            f"Calorie Target or Range: {inputs['calorie_limit']}
+"
         )
 
     caffeine_section = ""
@@ -218,6 +221,9 @@ def run_checks(inputs: dict) -> list[str]:
 
     if inputs["category"] == "Alcohol RTD" and inputs["alcohol_base"] in ["", "None Specified"]:
         warnings.append("Alcohol RTD selected but alcohol base preference is missing.")
+
+    if inputs["category"] == "Alcohol RTD" and not inputs["calorie_limit"]:
+        warnings.append("Alcohol RTD selected but calorie target or range is missing.")
 
     if inputs["category"] == "Hydration" and inputs["carbonation"] == "Carbonated":
         warnings.append("Carbonated hydration concepts are possible, but they may be less typical for mainstream sports hydration positioning.")
@@ -328,8 +334,9 @@ with input_tab:
 
             alcohol_percentage = ""
             alcohol_base = ""
+            calorie_limit = ""
             if category == "Alcohol RTD":
-                alcohol_col1, alcohol_col2 = st.columns(2)
+                alcohol_col1, alcohol_col2, alcohol_col3 = st.columns(3)
                 with alcohol_col1:
                     alcohol_percentage = st.text_input("Alcohol Percentage (ABV)", placeholder="5%")
                 with alcohol_col2:
@@ -339,6 +346,8 @@ with input_tab:
                         format_func=display_label,
                     )
                     alcohol_base = join_or_none(alcohol_base_options)
+                with alcohol_col3:
+                    calorie_limit = st.text_input("Calorie Target or Range", placeholder="100-120 calories")
 
         with st.expander("Ingredient System Selection", expanded=True):
             st.caption("Use these selections to identify ingredients or ingredient systems the client wants to include. Use the separate avoidance box for anything they do not want in the concept.")
@@ -399,6 +408,7 @@ with input_tab:
             "num_concepts": num_concepts,
             "alcohol_percentage": alcohol_percentage.strip(),
             "alcohol_base": alcohol_base.strip(),
+            "calorie_limit": calorie_limit.strip(),
         }
 
         missing = [key for key, value in inputs.items() if value == "" and key not in ["alcohol_percentage", "alcohol_base"]]
@@ -406,6 +416,8 @@ with input_tab:
             missing.append("alcohol_percentage")
         if category == "Alcohol RTD" and inputs["alcohol_base"] in ["", "None Specified"]:
             missing.append("alcohol_base")
+        if category == "Alcohol RTD" and inputs["calorie_limit"] == "":
+            missing.append("calorie_limit")
 
         if missing:
             pretty_missing = ", ".join(name.replace("_", " ") for name in missing)
@@ -459,6 +471,7 @@ with output_tab:
                 if inputs['category'] == 'Alcohol RTD':
                     st.write(f"**Alcohol Percentage:** {inputs['alcohol_percentage']}")
                     st.write(f"**Alcohol Base:** {inputs['alcohol_base']}")
+                    st.write(f"**Calorie Target / Range:** {inputs['calorie_limit']}")
 
     if output:
         st.markdown("### Client Concept Package")
