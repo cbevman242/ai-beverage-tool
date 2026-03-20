@@ -97,9 +97,58 @@ MANUFACTURING_PROCESS_OPTIONS = [
     "flash pasteurization",
 ]
 
+SUGAR_TARGET_OPTIONS = [
+    "not specified yet",
+    "zero sugar",
+    "low sugar",
+    "reduced sugar",
+    "full sugar",
+]
+
+CARB_TARGET_OPTIONS = [
+    "not specified yet",
+    "0g carbs",
+    "low carb",
+    "moderate carb",
+    "higher carb",
+]
+
+ACID_SYSTEM_OPTIONS = [
+    "not specified yet",
+    "citric acid",
+    "malic acid",
+    "phosphoric acid",
+    "tartaric acid",
+    "lactic acid",
+    "citric + malic blend",
+]
+
+CLAIM_TARGET_OPTIONS = [
+    "zero sugar",
+    "low calorie",
+    "natural",
+    "clean label",
+    "no artificial sweeteners",
+    "electrolyte support",
+    "energy support",
+    "recovery support",
+    "premium",
+    "mass market",
+    "better-for-you",
+]
+
 
 def display_label(value: str) -> str:
-    return value.title()
+    parts = value.split()
+    out = []
+    for p in parts:
+        if p.lower() == "rtd":
+            out.append("RTD")
+        elif p.lower() == "b":
+            out.append("B")
+        else:
+            out.append(p.capitalize())
+    return " ".join(out)
 
 
 def get_client() -> OpenAI:
@@ -120,13 +169,19 @@ def normalize_process(value: str) -> str:
     return display_label(value)
 
 
+def normalize_choice(value: str) -> str:
+    if not value or value == "not specified yet":
+        return "Not Specified Yet"
+    return display_label(value)
+
+
 def build_prompt(inputs: dict) -> str:
     alcohol_section = ""
     if inputs["category"] == "Alcohol RTD":
         alcohol_section = (
             f"Alcohol Percentage (ABV): {inputs['alcohol_percentage']}\n"
-            f"Alcohol Base Preference: {inputs['alcohol_base']}"
-            f"Calorie Target or Range: {inputs['calorie_limit']}"
+            f"Alcohol Base Preference: {inputs['alcohol_base']}\n"
+            f"Calorie Target or Range: {inputs['calorie_limit']}\n"
         )
 
     caffeine_section = ""
@@ -143,7 +198,11 @@ Client / Project Context:
 Flavor: {inputs['flavor']}
 Target Market: {inputs['market']}
 Category: {inputs['category']}
-{caffeine_section}Sweetener Preferences: {inputs['sweeteners']}
+{caffeine_section}Sugar Target: {inputs['sugar_target']}
+Carbohydrate Target: {inputs['carb_target']}
+Acid System Preference: {inputs['acid_system']}
+Claim Targets: {inputs['claim_targets']}
+Sweetener Preferences: {inputs['sweeteners']}
 Functional Ingredient Preferences: {inputs['functional_ingredients']}
 Desired Ingredients / Notes: {inputs['other_ingredients']}
 Ingredients to Avoid: {inputs['ingredients_avoid']}
@@ -156,11 +215,13 @@ Beverage Volume: {inputs['package_size']}
 {alcohol_section}
 Important rules:
 - Make each concept meaningfully different in flavor, positioning, and branding.
-- Follow the beverage type, carbonation, manufacturing process, package format, and alcohol targets exactly when provided.
+- Follow the beverage type, carbonation, manufacturing process, package format, sugar target, carb target, acid system, claim targets, and alcohol targets exactly when provided.
 - Do not include any ingredients listed in "Ingredients to Avoid."
 - If any requirements conflict, clearly point out the conflict before generating concepts.
 - Do not invent technical claims unless they are clearly labeled as suggestions.
 - Keep the concepts realistic for commercial beverage development.
+- Prioritize feasibility over creativity.
+- Avoid generic language and be commercially realistic.
 - Write in a polished, client-facing tone.
 
 For each concept, include:
@@ -174,6 +235,7 @@ For each concept, include:
   - Acid system approach
   - Preservative strategy
   - Key functional ingredients
+  - Claim-fit considerations
 - Equipment Needed to Manufacture
 - Packaging Summary
 - Potential Claims / Positioning Ideas
@@ -226,8 +288,11 @@ def run_checks(inputs: dict) -> list[str]:
     if inputs["category"] == "Hydration" and inputs["carbonation"] == "Carbonated":
         warnings.append("Carbonated hydration concepts are possible, but they may be less typical for mainstream sports hydration positioning.")
 
-    if inputs["category"] == "Energy" and inputs["caffeine"] == "None":
-        warnings.append("Energy category selected with no caffeine. Make sure that matches the intended market positioning.")
+    if inputs["category"] == "Energy" and inputs["sugar_target"] == "Zero Sugar" and inputs["sweeteners"] == "None Specified":
+        warnings.append("Zero sugar was selected without a sweetener direction. Consider selecting sweeteners to guide formulation direction.")
+
+    if inputs["claim_targets"] != "None Specified" and "Zero Sugar" in inputs["claim_targets"] and inputs["sugar_target"] not in ["Zero Sugar", "Not Specified Yet"]:
+        warnings.append("Claim target includes Zero Sugar, but sugar target does not match that direction.")
 
     return warnings
 
@@ -298,7 +363,7 @@ with input_tab:
                 flavor = st.text_input("Flavor", placeholder="Tropical Punch")
                 market = st.text_input("Target Market", placeholder="Gamers")
 
-                if category == "Energy":
+                if category_raw == "energy":
                     caffeine_raw = st.selectbox(
                         "Caffeine Level",
                         ["low", "medium", "high"],
@@ -315,10 +380,24 @@ with input_tab:
                 )
                 carbonation = display_label(carbonation_raw)
 
+                sugar_target_raw = st.selectbox(
+                    "Sugar Target",
+                    SUGAR_TARGET_OPTIONS,
+                    format_func=display_label,
+                )
+                sugar_target = normalize_choice(sugar_target_raw)
+
+                carb_target_raw = st.selectbox(
+                    "Carbohydrate Target",
+                    CARB_TARGET_OPTIONS,
+                    format_func=display_label,
+                )
+                carb_target = normalize_choice(carb_target_raw)
+
             with col2:
                 package_type_raw = st.selectbox(
                     "Package Type",
-                    ["can", "pet bottle", "glass"],
+                    ["can", "pet bottle"],
                     format_func=display_label,
                 )
                 package_type = display_label(package_type_raw)
@@ -332,6 +411,14 @@ with input_tab:
                     help="Clients may not know the process. Leave as Not Specified Yet or choose an example like HTST, Aseptic, or Hot Fill.",
                 )
                 process = normalize_process(process_choice)
+
+                acid_system_raw = st.selectbox(
+                    "Acid System Preference",
+                    ACID_SYSTEM_OPTIONS,
+                    format_func=display_label,
+                    help="This helps guide flavor brightness, tartness, and formulation direction.",
+                )
+                acid_system = normalize_choice(acid_system_raw)
 
                 num_concepts = st.selectbox("Number of Concepts", [1, 3, 5], index=1)
 
@@ -377,6 +464,12 @@ with input_tab:
                 format_func=display_label,
             )
 
+            claim_target_options = st.multiselect(
+                "Claim Targets",
+                CLAIM_TARGET_OPTIONS,
+                format_func=display_label,
+            )
+
             preservative_col1, preservative_col2 = st.columns(2)
             with preservative_col1:
                 natural_preservative_options = st.multiselect(
@@ -414,6 +507,10 @@ with input_tab:
             "market": market.strip(),
             "category": category,
             "caffeine": caffeine,
+            "sugar_target": sugar_target,
+            "carb_target": carb_target,
+            "acid_system": acid_system,
+            "claim_targets": join_or_none(claim_target_options),
             "sweeteners": join_or_none(sweetener_options),
             "functional_ingredients": join_or_none(functional_options),
             "other_ingredients": other_ingredients.strip(),
@@ -430,12 +527,12 @@ with input_tab:
             "calorie_limit": calorie_limit.strip(),
         }
 
-        missing = [key for key, value in inputs.items() if value == "" and key not in ["alcohol_percentage", "alcohol_base"]]
-        if category == "Alcohol RTD" and inputs["alcohol_percentage"] == "":
+        missing = [key for key, value in inputs.items() if value == "" and key not in ["alcohol_percentage", "alcohol_base", "calorie_limit"]]
+        if category_raw == "alcohol rtd" and inputs["alcohol_percentage"] == "":
             missing.append("alcohol_percentage")
-        if category == "Alcohol RTD" and inputs["alcohol_base"] in ["", "None Specified"]:
+        if category_raw == "alcohol rtd" and inputs["alcohol_base"] in ["", "None Specified"]:
             missing.append("alcohol_base")
-        if category == "Alcohol RTD" and inputs["calorie_limit"] == "":
+        if category_raw == "alcohol rtd" and inputs["calorie_limit"] == "":
             missing.append("calorie_limit")
 
         if missing:
@@ -481,10 +578,14 @@ with output_tab:
                 st.write(f"**Flavor:** {inputs['flavor']}")
                 st.write(f"**Target Market:** {inputs['market']}")
                 st.write(f"**Carbonation:** {inputs['carbonation']}")
+                st.write(f"**Sugar Target:** {inputs['sugar_target']}")
+                st.write(f"**Carbohydrate Target:** {inputs['carb_target']}")
+                st.write(f"**Acid System:** {inputs['acid_system']}")
             with right:
                 st.write(f"**Package Type:** {inputs['package_type']}")
                 st.write(f"**Package Size:** {inputs['package_size']}")
                 st.write(f"**Manufacturing Process:** {inputs['process']}")
+                st.write(f"**Claim Targets:** {inputs['claim_targets']}")
                 if inputs['category'] == 'Energy':
                     st.write(f"**Caffeine Level:** {inputs['caffeine']}")
                 if inputs['category'] == 'Alcohol RTD':
@@ -513,5 +614,5 @@ with output_tab:
 st.divider()
 st.subheader("Recommended Next Phase")
 st.write(
-    "Next, expand the formula selection logic even further with acid systems, color systems, juice content, claim targets, sweetener loading guidance, and packaging-specific development constraints."
+    "Next, expand the formula selection logic even further with color systems, juice content, claim-specific guardrails, sweetener loading guidance, and packaging-specific development constraints."
 )
