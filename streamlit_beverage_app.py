@@ -257,6 +257,9 @@ Important rules:
 - Prioritize feasibility over creativity.
 - Avoid generic language and be commercially realistic.
 - Write in a polished, client-facing tone.
+- Be specific and commercially realistic.
+- Call out technical tensions clearly instead of smoothing over them.
+- Prefer feasible formulation direction over overly creative ideas.
 
 For each concept, include:
 - Product Name
@@ -290,6 +293,14 @@ For each concept, include:
 - Risks or Formulation Watchouts
 - Go / No-Go Recommendation
 - Estimated Development Difficulty (Low / Medium / High)
+- Claim Feasibility Score (1-10)
+- Claim Conflicts or Tensions
+- Formulation Compatibility Notes
+- Flavor System Strategy:
+  - Top note direction
+  - Mid-palate direction
+  - Finish profile
+  - Masking considerations
 
 At the end, include:
 - Best concept for mass market appeal
