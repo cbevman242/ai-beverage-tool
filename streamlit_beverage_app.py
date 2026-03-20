@@ -47,6 +47,16 @@ SWEETENER_OPTIONS = [
     "dextrose",
 ]
 
+SWEETENER_STRATEGY_OPTIONS = [
+    "not specified yet",
+    "natural only",
+    "artificial allowed",
+    "blend for taste",
+    "zero sugar focus",
+    "cost optimized",
+    "premium taste focus",
+]
+
 NATURAL_PRESERVATIVE_OPTIONS = [
     "ascorbic acid",
     "rosemary extract",
@@ -137,6 +147,25 @@ CLAIM_TARGET_OPTIONS = [
     "better-for-you",
 ]
 
+JUICE_CONTENT_OPTIONS = [
+    "not specified yet",
+    "no juice",
+    "splash of juice",
+    "1-5% juice",
+    "5-10% juice",
+    "juice-forward",
+]
+
+COLOR_APPEARANCE_OPTIONS = [
+    "not specified yet",
+    "clear",
+    "light tint",
+    "bold color",
+    "natural color only",
+    "artificial color allowed",
+    "cloudy / juice-style appearance",
+]
+
 
 def display_label(value: str) -> str:
     parts = value.split()
@@ -146,6 +175,8 @@ def display_label(value: str) -> str:
             out.append("RTD")
         elif p.lower() == "b":
             out.append("B")
+        elif p.lower() == "hfcs":
+            out.append("HFCS")
         else:
             out.append(p.capitalize())
     return " ".join(out)
@@ -201,6 +232,9 @@ Category: {inputs['category']}
 {caffeine_section}Sugar Target: {inputs['sugar_target']}
 Carbohydrate Target: {inputs['carb_target']}
 Acid System Preference: {inputs['acid_system']}
+Sweetener Strategy: {inputs['sweetener_strategy']}
+Juice Content Preference: {inputs['juice_content']}
+Color / Appearance Direction: {inputs['color_appearance']}
 Claim Targets: {inputs['claim_targets']}
 Sweetener Preferences: {inputs['sweeteners']}
 Functional Ingredient Preferences: {inputs['functional_ingredients']}
@@ -215,7 +249,7 @@ Beverage Volume: {inputs['package_size']}
 {alcohol_section}
 Important rules:
 - Make each concept meaningfully different in flavor, positioning, and branding.
-- Follow the beverage type, carbonation, manufacturing process, package format, sugar target, carb target, acid system, claim targets, and alcohol targets exactly when provided.
+- Follow the beverage type, carbonation, manufacturing process, package format, sugar target, carb target, acid system, sweetener strategy, juice content, appearance direction, claim targets, and alcohol targets exactly when provided.
 - Do not include any ingredients listed in "Ingredients to Avoid."
 - If any requirements conflict, clearly point out the conflict before generating concepts.
 - Do not invent technical claims unless they are clearly labeled as suggestions.
@@ -235,6 +269,8 @@ For each concept, include:
   - Acid system approach
   - Preservative strategy
   - Key functional ingredients
+  - Juice strategy
+  - Appearance / color direction
   - Claim-fit considerations
 - Equipment Needed to Manufacture
 - Packaging Summary
@@ -289,10 +325,25 @@ def run_checks(inputs: dict) -> list[str]:
         warnings.append("Carbonated hydration concepts are possible, but they may be less typical for mainstream sports hydration positioning.")
 
     if inputs["category"] == "Energy" and inputs["sugar_target"] == "Zero Sugar" and inputs["sweeteners"] == "None Specified":
-        warnings.append("Zero sugar was selected without a sweetener direction. Consider selecting sweeteners to guide formulation direction.")
+        warnings.append("Zero Sugar was selected without a sweetener direction. Consider selecting sweeteners to guide formulation direction.")
 
     if inputs["claim_targets"] != "None Specified" and "Zero Sugar" in inputs["claim_targets"] and inputs["sugar_target"] not in ["Zero Sugar", "Not Specified Yet"]:
         warnings.append("Claim target includes Zero Sugar, but sugar target does not match that direction.")
+
+    if inputs["claim_targets"] != "None Specified" and "Low Calorie" in inputs["claim_targets"] and inputs["category"] == "Alcohol RTD" and inputs["calorie_limit"] == "":
+        warnings.append("Low Calorie claim target is selected for Alcohol RTD, but no calorie target was provided.")
+
+    if inputs["claim_targets"] != "None Specified" and "Natural" in inputs["claim_targets"] and inputs["artificial_preservatives"] != "None Specified":
+        warnings.append("Natural claim target is selected, but artificial preservatives were also selected.")
+
+    if inputs["claim_targets"] != "None Specified" and "No Artificial Sweeteners" in inputs["claim_targets"]:
+        artificial_sweeteners = ["Sucralose"]
+        selected = inputs["sweeteners"]
+        if any(item in selected for item in artificial_sweeteners):
+            warnings.append("No Artificial Sweeteners claim target is selected, but the sweetener selection includes Sucralose.")
+
+    if inputs["juice_content"] == "No Juice" and "juice" in inputs["other_ingredients"].lower():
+        warnings.append("Juice content is set to No Juice, but other desired ingredients mention juice.")
 
     return warnings
 
@@ -394,6 +445,13 @@ with input_tab:
                 )
                 carb_target = normalize_choice(carb_target_raw)
 
+                juice_content_raw = st.selectbox(
+                    "Juice Content Preference",
+                    JUICE_CONTENT_OPTIONS,
+                    format_func=display_label,
+                )
+                juice_content = normalize_choice(juice_content_raw)
+
             with col2:
                 package_type_raw = st.selectbox(
                     "Package Type",
@@ -419,6 +477,13 @@ with input_tab:
                     help="This helps guide flavor brightness, tartness, and formulation direction.",
                 )
                 acid_system = normalize_choice(acid_system_raw)
+
+                color_appearance_raw = st.selectbox(
+                    "Color / Appearance Direction",
+                    COLOR_APPEARANCE_OPTIONS,
+                    format_func=display_label,
+                )
+                color_appearance = normalize_choice(color_appearance_raw)
 
                 num_concepts = st.selectbox("Number of Concepts", [1, 3, 5], index=1)
 
@@ -457,6 +522,14 @@ with input_tab:
                 SWEETENER_OPTIONS,
                 format_func=display_label,
             )
+
+            sweetener_strategy_raw = st.selectbox(
+                "Sweetener Strategy",
+                SWEETENER_STRATEGY_OPTIONS,
+                format_func=display_label,
+                help="Use this to guide whether the concept should focus on natural systems, zero sugar systems, cost, or premium taste.",
+            )
+            sweetener_strategy = normalize_choice(sweetener_strategy_raw)
 
             functional_options = st.multiselect(
                 "Functional Ingredients To Include",
@@ -510,6 +583,9 @@ with input_tab:
             "sugar_target": sugar_target,
             "carb_target": carb_target,
             "acid_system": acid_system,
+            "sweetener_strategy": sweetener_strategy,
+            "juice_content": juice_content,
+            "color_appearance": color_appearance,
             "claim_targets": join_or_none(claim_target_options),
             "sweeteners": join_or_none(sweetener_options),
             "functional_ingredients": join_or_none(functional_options),
@@ -581,11 +657,14 @@ with output_tab:
                 st.write(f"**Sugar Target:** {inputs['sugar_target']}")
                 st.write(f"**Carbohydrate Target:** {inputs['carb_target']}")
                 st.write(f"**Acid System:** {inputs['acid_system']}")
+                st.write(f"**Juice Content:** {inputs['juice_content']}")
             with right:
                 st.write(f"**Package Type:** {inputs['package_type']}")
                 st.write(f"**Package Size:** {inputs['package_size']}")
                 st.write(f"**Manufacturing Process:** {inputs['process']}")
                 st.write(f"**Claim Targets:** {inputs['claim_targets']}")
+                st.write(f"**Sweetener Strategy:** {inputs['sweetener_strategy']}")
+                st.write(f"**Color / Appearance:** {inputs['color_appearance']}")
                 if inputs['category'] == 'Energy':
                     st.write(f"**Caffeine Level:** {inputs['caffeine']}")
                 if inputs['category'] == 'Alcohol RTD':
@@ -614,5 +693,5 @@ with output_tab:
 st.divider()
 st.subheader("Recommended Next Phase")
 st.write(
-    "Next, expand the formula selection logic even further with color systems, juice content, claim-specific guardrails, sweetener loading guidance, and packaging-specific development constraints."
+    "Next, expand the formula selection logic even further with claim-specific scoring, ingredient compatibility guidance, flavor system direction, and packaging-specific development constraints."
 )
